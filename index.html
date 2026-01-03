@@ -1108,98 +1108,125 @@
     </div>
 
     <script>
-        // ============== 服务器API配置 ============== //
-        const API_CONFIG = {
-            // 根据部署环境自动选择API地址
-            getBaseUrl: function() {
-                // 如果是本地开发环境
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    return 'http://localhost:3000/api';
-                }
-                // 生产环境 - 替换为您的Vercel域名
-                return 'https://bsfootball.vercel.app/api';
-            },
-            
-            // 推荐API端点
-            endpoints: {
-                asianRecommendation: '/recommend/asian',
-                sizeRecommendation: '/recommend/size',
-                testConnection: '/test'
-            }
-        };
+        
+const API_CONFIG = {
+  getBaseUrl: function() {
+    // 生产环境 - 使用你的 Vercel 后端域名
+    return 'https://your-backend-api.vercel.app';
+  },
+  
+  endpoints: {
+    register: '/api/register',
+    login: '/api/login',
+    history: '/api/history',
+    records: '/api/records',
+    asianRecommendation: '/api/recommend/asian',
+    sizeRecommendation: '/api/recommend/size',
+    invitationCodes: '/api/invitation-codes',
+    test: '/api/test'
+  }
+};
 
-        // ============== API服务 ============== //
-        const APIService = {
-            // 显示全局加载
-            showGlobalLoading: function(message = '正在处理，请稍候...') {
-                const loading = document.getElementById('globalLoading');
-                const loadingText = loading.querySelector('.loading-text');
-                loadingText.textContent = message;
-                loading.style.display = 'flex';
-            },
-
-            // 隐藏全局加载
-            hideGlobalLoading: function() {
-                const loading = document.getElementById('globalLoading');
-                loading.style.display = 'none';
-            },
-
-            // 测试服务器连接
-            testConnection: async function() {
-                try {
-                    const response = await fetch(`${API_CONFIG.getBaseUrl()}${API_CONFIG.endpoints.testConnection}`);
-                    return await response.json();
-                } catch (error) {
-                    console.error('服务器连接测试失败:', error);
-                    return { success: false, error: error.message };
-                }
-            },
-
-            // 获取让球盘推荐
-            getAsianRecommendation: async function(data) {
-                try {
-                    const response = await fetch(`${API_CONFIG.getBaseUrl()}${API_CONFIG.endpoints.asianRecommendation}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP错误: ${response.status}`);
-                    }
-                    
-                    return await response.json();
-                } catch (error) {
-                    console.error('获取让球盘推荐失败:', error);
-                    throw error;
-                }
-            },
-
-            // 获取大小盘推荐
-            getSizeRecommendation: async function(data) {
-                try {
-                    const response = await fetch(`${API_CONFIG.getBaseUrl()}${API_CONFIG.endpoints.sizeRecommendation}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP错误: ${response.status}`);
-                    }
-                    
-                    return await response.json();
-                } catch (error) {
-                    console.error('获取大小盘推荐失败:', error);
-                    throw error;
-                }
-            }
-        };
-
+ // 创建统一的API服务
+const APIService = {
+  // 获取认证头
+  getAuthHeader: function() {
+    const token = localStorage.getItem('authToken');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  },
+  
+  // 通用请求方法
+  async request(endpoint, method = 'GET', data = null) {
+    const url = `${API_CONFIG.getBaseUrl()}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...this.getAuthHeader()
+    };
+    
+    const options = {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : null
+    };
+    
+    try {
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP错误: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('API请求失败:', error);
+      throw error;
+    }
+  },
+  
+  // 用户注册
+  async register(username, password, invitationCode) {
+    return this.request(API_CONFIG.endpoints.register, 'POST', {
+      username,
+      password,
+      invitationCode
+    });
+  },
+  
+  // 用户登录
+  async login(username, password) {
+    return this.request(API_CONFIG.endpoints.login, 'POST', {
+      username,
+      password
+    });
+  },
+  
+  // 获取历史记录
+  async getHistory(userId) {
+    return this.request(`${API_CONFIG.endpoints.history}?userId=${userId}`, 'GET');
+  },
+  
+  // 保存记录
+  async saveRecord(record) {
+    return this.request(API_CONFIG.endpoints.records, 'POST', record);
+  },
+  
+  // 更新记录
+  async updateRecord(id, updates) {
+    return this.request(`${API_CONFIG.endpoints.records}/${id}`, 'PUT', updates);
+  },
+  
+  // 删除记录
+  async deleteRecord(id) {
+    return this.request(`${API_CONFIG.endpoints.records}/${id}`, 'DELETE');
+  },
+  
+  // 获取邀请码
+  async getInvitationCodes() {
+    return this.request(API_CONFIG.endpoints.invitationCodes, 'GET');
+  },
+  
+  // 导入邀请码
+  async importInvitationCodes(codes, createdBy = 'admin') {
+    return this.request(API_CONFIG.endpoints.invitationCodes, 'POST', {
+      codes,
+      createdBy
+    });
+  },
+  
+  // 推荐算法
+  async getAsianRecommendation(data) {
+    return this.request(API_CONFIG.endpoints.asianRecommendation, 'POST', data);
+  },
+  
+  async getSizeRecommendation(data) {
+    return this.request(API_CONFIG.endpoints.sizeRecommendation, 'POST', data);
+  },
+  
+  // 测试连接
+  async testConnection() {
+    return this.request(API_CONFIG.endpoints.test, 'GET');
+  }
+};
         // ============== 存储管理器（防止试用次数重置） ============== //
 
         const StorageManager = {
@@ -1987,70 +2014,63 @@
                 document.getElementById('registerModal').style.display = 'none';
             },
 
-            login: function() {
-                const username = document.getElementById('loginUsername').value.trim();
-                const password = document.getElementById('loginPassword').value.trim();
+// 修改 UserSystem 的 login 方法
+login: async function() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
 
-                // 验证输入
-                let isValid = true;
-                if (!username) {
-                    this.showError('loginUsernameError', '请输入用户名');
-                    isValid = false;
-                } else {
-                    this.hideError('loginUsernameError');
-                }
+  // 验证输入
+  let isValid = true;
+  if (!username) {
+    this.showError('loginUsernameError', '请输入用户名');
+    isValid = false;
+  } else {
+    this.hideError('loginUsernameError');
+  }
 
-                if (!password) {
-                    this.showError('loginPasswordError', '请输入密码');
-                    isValid = false;
-                } else {
-                    this.hideError('loginPasswordError');
-                }
+  if (!password) {
+    this.showError('loginPasswordError', '请输入密码');
+    isValid = false;
+  } else {
+    this.hideError('loginPasswordError');
+  }
 
-                if (!isValid) return;
+  if (!isValid) return;
 
-                // 获取用户数据
-                const users = JSON.parse(localStorage.getItem('users') || '[]');
-                const user = users.find(u => u.username === username && u.password === password);
-
-                if (user) {
-                    // ========== 新增：验证指纹一致性 ========== //
-                    const fingerprintValid = FingerprintManager.verifyConsistency(username);
-                    if (!fingerprintValid) {
-                        alert('检测到浏览器环境异常，请勿频繁清除数据！');
-                    }
-
-                    // ========== 新增：存储用户指纹关联 ========== //
-                    FingerprintManager.storeUserFingerprint(username);
-
-                    // 更新最后登录时间
-                    user.lastLogin = new Date().toISOString();
-                    localStorage.setItem('users', JSON.stringify(users));
-
-                    // 保存当前用户
-                    localStorage.setItem('currentUser', JSON.stringify(user));
-
-                    // 更新UI
-                    this.updateUI(user);
-
-                    // 隐藏模态框
-                    this.hideAllModals();
-
-                    // 更新试用信息
-                    if (user.userType === 'trial') {
-                        this.updateTrialInfo(user.username);
-                    }
-
-                    // 重新加载历史记录
-                    loadHistory();
-
-                    // 显示成功消息
-                    alert(`欢迎回来，${user.username}！`);
-                } else {
-                    this.showError('loginPasswordError', '用户名或密码错误');
-                }
-            },
-
+  try {
+    APIService.showGlobalLoading('正在登录...');
+    const result = await APIService.login(username, password);
+    APIService.hideGlobalLoading();
+    
+    if (result.success) {
+      const user = result.user;
+      
+      // 存储用户信息和token（如果有）
+      if (result.token) {
+        localStorage.setItem('authToken', result.token);
+      }
+      
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      
+      // 更新UI
+      this.updateUI(user);
+      
+      // 隐藏模态框
+      this.hideAllModals();
+      
+      // 重新加载历史记录
+      loadHistory();
+      
+      // 显示成功消息
+      alert(`欢迎回来，${user.username}！`);
+    } else {
+      this.showError('loginPasswordError', result.error || '登录失败');
+    }
+  } catch (error) {
+    APIService.hideGlobalLoading();
+    this.showError('loginPasswordError', '网络错误，请重试');
+  }
+},
             // 注册
             register: function() {
                 const username = document.getElementById('registerUsername').value.trim();
@@ -3202,137 +3222,82 @@
         }
 
         // ============== 保存记录功能 ============== //
-        // 保存让球盘记录
-        async function saveAsianRecord() {
-            // 检查用户登录状态
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            let username = 'guest';
-            let userType = 'trial';
+        // 修改 saveAsianRecord 方法
+async function saveAsianRecord() {
+  // 获取当前用户
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  if (!currentUser) {
+    alert('请先登录！');
+    UserSystem.showLoginModal();
+    return;
+  }
 
-            if (currentUser) {
-                username = currentUser.username;
-                userType = currentUser.userType;
-            } else {
-                // 为游客生成唯一标识（基于时间戳）
-                username = getGuestUserId();
-            }
+  // 验证数据
+  const matchName = document.getElementById('asian-match-name').value.trim();
+  const initialHandicap = document.getElementById('asian-initial-handicap').value;
+  const currentHandicap = document.getElementById('asian-current-handicap').value;
+  const initialWater = document.getElementById('asian-initial-water').value;
+  const currentWater = document.getElementById('asian-current-water').value;
+  const historicalRecord = document.getElementById('asian-historical-record').value;
+  const recommendationResult = document.getElementById('asian-recommendation-result').textContent;
 
-            // 如果是试用用户或游客，进行更严格的检查
-            if (!currentUser || userType === 'trial') {
-                // 1. 检查试用次数
-                const canSave = UserSystem.canSaveRecord(username);
-                if (!canSave) {
-                    let message = '试用次数已用完（最多18次）。';
+  // 验证数据
+  if (!matchName) {
+    alert('请先输入赛事名称！');
+    return;
+  }
 
-                    // 检查具体原因
-                    const isExpired = StorageManager.isTrialExpired(username);
-                    const restriction = StorageManager.isRestricted(username);
+  if (!initialHandicap || !currentHandicap || !initialWater || !currentWater || !historicalRecord ||
+    recommendationResult === "等待输入" || recommendationResult === "计算中..." || 
+    recommendationResult === "计算失败") {
+    alert('请先填写所有字段并获取推荐结果！');
+    return;
+  }
 
-                    if (isExpired) {
-                        message = '试用期已过期（7天）。';
-                    } else if (restriction.restricted) {
-                        message = `账号受限：${restriction.reason}，剩余 ${restriction.hoursLeft} 小时`;
-                    }
+  // 创建记录对象
+  const record = {
+    user_id: currentUser.id,
+    user_type: currentUser.user_type || currentUser.userType,
+    match_name: matchName,
+    handicap_type: 'asian',
+    initial_handicap: parseFloat(initialHandicap),
+    current_handicap: parseFloat(currentHandicap),
+    initial_water: parseFloat(initialWater),
+    current_water: parseFloat(currentWater),
+    handicap_change: (parseFloat(currentHandicap) - parseFloat(initialHandicap)).toFixed(2),
+    water_change: (parseFloat(currentWater) - parseFloat(initialWater)).toFixed(2),
+    historical_record: historicalRecord,
+    recommendation: recommendationResult,
+    actual_result: ""
+  };
 
-                    alert(message + ' 请注册成为会员继续使用！');
-                    UserSystem.showRegisterModal();
-                    return;
-                }
-            }
-
-            // 验证数据
-            const matchName = document.getElementById('asian-match-name').value.trim(); // 新增赛事名称
-            const initialHandicap = document.getElementById('asian-initial-handicap').value;
-            const currentHandicap = document.getElementById('asian-current-handicap').value;
-            const initialWater = document.getElementById('asian-initial-water').value;
-            const currentWater = document.getElementById('asian-current-water').value;
-            const historicalRecord = document.getElementById('asian-historical-record').value;
-            const recommendationResult = document.getElementById('asian-recommendation-result').textContent;
-
-            // 验证数据
-            if (!matchName) {
-                alert('请先输入赛事名称！');
-                return;
-            }
-
-            if (!initialHandicap || !currentHandicap || !initialWater || !currentWater || !historicalRecord ||
-                recommendationResult === "等待输入" || recommendationResult === "计算中..." || 
-                recommendationResult === "计算失败") {
-                alert('请先填写所有字段并获取推荐结果！');
-                return;
-            }
-
-            // 确定用户ID
-            let userId = 'guest';
-            if (currentUser) {
-                userId = currentUser.id;
-                username = currentUser.username;
-            }
-
-            // 创建记录对象
-            const record = {
-                id: Date.now(), // 使用时间戳作为ID
-                handicapType: 'asian', // 盘口类型：asian=让球盘
-                userId: userId,
-                username: username,
-                matchName: matchName, // 新增赛事名称
-                initialHandicap: initialHandicap,
-                currentHandicap: currentHandicap,
-                initialWater: initialWater,
-                currentWater: currentWater,
-                handicapChange: (parseFloat(currentHandicap) - parseFloat(initialHandicap)).toFixed(2),
-                waterChange: (parseFloat(currentWater) - parseFloat(initialWater)).toFixed(2),
-                historicalRecord: historicalRecord,
-                recommendation: recommendationResult,
-                actualResult: "", // 实际结果为空，用户可以后续编辑
-                timestamp: new Date().toLocaleString()
-            };
-
-            // 从localStorage获取现有记录
-            let history = JSON.parse(localStorage.getItem('football-handicap-history') || '[]');
-
-            // 添加新记录
-            history.push(record);
-
-            // 保存到localStorage
-            localStorage.setItem('football-handicap-history', JSON.stringify(history));
-
-            // 如果是试用用户，增加记录次数
-            if (!currentUser || userType === 'trial') {
-                const success = UserSystem.incrementTrialRecord(username);
-                if (!success) {
-                    alert('保存失败：试用次数已达上限或试用期已过期！');
-
-                    // 如果保存失败，移除刚添加的记录
-                    history = history.filter(r => r.id !== record.id);
-                    localStorage.setItem('football-handicap-history', JSON.stringify(history));
-
-                    return;
-                }
-            }
-
-            // 重新加载历史记录
-            loadHistory();
-
-            // 显示成功消息，包含试用信息
-            let successMsg = '让球盘记录已保存！';
-            if (!currentUser || userType === 'trial') {
-                const trialData = StorageManager.getTrialData(username);
-                const usedCount = trialData ? trialData.count : 0;
-                const remaining = 18 - usedCount;
-                const remainingDays = StorageManager.getRemainingTrialDays(username);
-
-                successMsg += `\n\n试用信息：`;
-                successMsg += `\n已使用次数：${usedCount}/18`;
-                successMsg += `\n剩余次数：${remaining}`;
-                if (remainingDays < 7) {
-                    successMsg += `\n试用期剩余：${remainingDays}天`;
-                }
-            }
-
-            alert(successMsg);
-        }
-
+  try {
+    APIService.showGlobalLoading('正在保存记录...');
+    const result = await APIService.saveRecord(record);
+    APIService.hideGlobalLoading();
+    
+    if (result.success) {
+      // 重新加载历史记录
+      loadHistory();
+      
+      // 重置表单
+      resetAsianForm();
+      
+      // 显示成功消息
+      let successMsg = '让球盘记录已保存！';
+      if (currentUser.user_type === 'trial' || currentUser.userType === 'trial') {
+        successMsg += `\n\n剩余试用次数: ${17 - currentUser.trial_count}`;
+      }
+      
+      alert(successMsg);
+    } else {
+      alert('保存失败: ' + (result.error || '未知错误'));
+    }
+  } catch (error) {
+    APIService.hideGlobalLoading();
+    alert('保存失败: ' + error.message);
+  }
+}
         // 保存大小盘记录
         async function saveSizeRecord() {
             // 检查用户登录状态
