@@ -2164,6 +2164,13 @@
 
             // 检查试用用户是否可以保存记录
             canSaveRecord: function(username) {
+ // 如果是游客，确保使用固定的游客ID
+    if (username === 'guest' || username.startsWith('guest_')) {
+        const guestId = getGuestUserId();
+        username = guestId; // 使用固定的游客ID
+    }
+
+
                 // ========== 新增：检查指纹异常 ========== //
                 const fingerprintValid = FingerprintManager.verifyConsistency(username);
                 if (!fingerprintValid) {
@@ -3465,9 +3472,10 @@
             // 过滤出当前用户的记录
             if (currentUser) {
                 history = history.filter(record => record.userId === currentUser.id);
-            } else {
-                history = history.filter(record => record.userId === 'guest' || record.userId.toString().includes('guest_'));
-            }
+            } else { 
+                const guestId = getGuestUserId();
+        history = history.filter(record => record.username === guestId);
+    }
 
             const tableBody = document.getElementById('history-table-body');
             // 清空现有内容
