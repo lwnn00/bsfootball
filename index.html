@@ -1851,29 +1851,29 @@
             },
 
             // 显示游客UI
-            showGuestUI: function() {
-                document.getElementById('userInfo').innerHTML = `
-            <div class="user-name">游客</div>
-            <div class="user-type">试用用户</div>
-        `;
-                document.getElementById('userActions').innerHTML = `
-            <button class="user-btn" id="loginBtnHeader">登录</button>
-            <button class="user-btn" id="registerBtnHeader">注册</button>
-        `;
+   showGuestUI : function() {
+    const guestId = getGuestUserId();
+    
+    document.getElementById('userInfo').innerHTML = `
+        <div class="user-name">游客</div>
+        <div class="user-type">试用用户</div>
+    `;
+    document.getElementById('userActions').innerHTML = `
+        <button class="user-btn" id="loginBtnHeader">登录</button>
+        <button class="user-btn" id="registerBtnHeader">注册</button>
+    `;
 
-                // 显示试用信息
-                const trialInfoElement = document.getElementById('trialInfo');
-                if (trialInfoElement) {
-                    trialInfoElement.style.display = 'block';
-                    this.updateTrialInfo('guest');
-                }
+    // 显示试用信息
+    const trialInfoElement = document.getElementById('trialInfo');
+    if (trialInfoElement) {
+        trialInfoElement.style.display = 'block';
+        this.updateTrialInfo(guestId);  // 使用固定的游客ID
+    }
 
-                // 绑定事件
-                document.getElementById('loginBtnHeader').addEventListener('click', () => this.showLoginModal());
-                document.getElementById('registerBtnHeader').addEventListener('click', () => this
-                .showRegisterModal());
-            },
-
+    // 绑定事件
+    document.getElementById('loginBtnHeader').addEventListener('click', () => this.showLoginModal());
+    document.getElementById('registerBtnHeader').addEventListener('click', () => this.showRegisterModal());
+},
             // 更新用户UI
             updateUI: function(user) {
                 document.getElementById('userInfo').innerHTML = `
@@ -3214,7 +3214,7 @@
                 userType = currentUser.userType;
             } else {
                 // 为游客生成唯一标识（基于时间戳）
-                username = 'guest_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+                username = getGuestUserId();
             }
 
             // 如果是试用用户或游客，进行更严格的检查
@@ -3336,17 +3336,18 @@
         // 保存大小盘记录
         async function saveSizeRecord() {
             // 检查用户登录状态
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            let username = 'guest';
-            let userType = 'trial';
+            // 检查用户登录状态
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    let username = 'guest';
+    let userType = 'trial';
 
-            if (currentUser) {
-                username = currentUser.username;
-                userType = currentUser.userType;
-            } else {
-                // 为游客生成唯一标识（基于时间戳）
-                username = 'guest_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
-            }
+    if (currentUser) {
+        username = currentUser.username;
+        userType = currentUser.userType;
+    } else {
+        // 使用固定的游客标识符（基于指纹或本地存储）
+        username = getGuestUserId();
+    }
 
             // 如果是试用用户或游客，进行更严格的检查
             if (!currentUser || userType === 'trial') {
@@ -3463,7 +3464,38 @@
 
             alert(successMsg);
         }
-
+function getGuestUserId() {
+    const STORAGE_KEY = 'guest_user_id';
+    
+    // 检查是否有存储的游客ID
+    let guestId = localStorage.getItem(STORAGE_KEY);
+    
+    if (!guestId) {
+        // 生成新的游客ID（基于时间戳和随机数，但只生成一次）
+        guestId = 'guest_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+        
+        // 存储到本地，确保以后使用同一个ID
+        localStorage.setItem(STORAGE_KEY, guestId);
+        
+        // 同时存储创建时间
+        localStorage.setItem('guest_created_time', Date.now().toString());
+        
+        // 初始化试用数据
+        const trialData = {
+            count: 0,
+            createdTimestamp: Date.now(),
+            firstUse: new Date().toISOString(),
+            lastUpdate: new Date().toISOString(),
+            attempts: 0
+        };
+        
+        StorageManager.setTrialData(guestId, trialData);
+        
+        console.log('创建新游客ID:', guestId);
+    }
+    
+    return guestId;
+}
         // 加载历史记录（只显示当前用户的记录）
         function loadHistory() {
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
