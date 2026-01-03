@@ -1293,9 +1293,9 @@
             },
 
             // 保存记录
-            saveRecord: async function(record) {
-                return this.request(API_CONFIG.endpoints.records, 'POST', record, true);
-            },
+          saveRecord: async function(record) {
+  return this.request(API_CONFIG.endpoints.records, 'POST', record);
+},
 
             // 更新记录
             updateRecord: async function(id, data) {
