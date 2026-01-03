@@ -1,0 +1,19 @@
+{
+  "name": "football-handicap-api",
+  "version": "1.0.0",
+  "description": "足球让球/大小盘口推荐API",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@vercel/node": "^3.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.10.2"
+  }
+}
